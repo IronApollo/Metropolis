@@ -1,0 +1,6 @@
+TODO
+
+- Make loading concurrent
+- Don't load all schems into memory
+- move to mysql -> question of settings, see bukkit.yml
+- log placements into db for persistence

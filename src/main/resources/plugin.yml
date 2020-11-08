@@ -1,0 +1,29 @@
+name: Metropolis
+main: ch.k42.metropolis.plugin.MetropolisPlugin
+version: 0.1.6
+load: startup
+authors: [AthmosPrime, trichner, spaceribs]
+website: k42.ch
+description: Metropolis (1927)
+softdepend: [WorldEdit]
+loadbefore: [Multiverse-Core, dimension-door, multiworld]
+database: true
+prefix: Metropolis
+commands:
+  metropolis:
+    description: asks Maria kindly to travel to Metropolis
+    usage: /metropolis [worldname] [environment]
+    permission: metropolis.command
+  freder:
+      description: retrieves info about the location
+      usage: /freder
+      permission: metropolis.command
+  grot:
+        description: displays some statistics about this grid
+        usage: /grot
+        permission: metropolis.command
+permissions:
+  metropolis.*:
+    description: Gives access to all Metropolis commands
+    children:
+      metropolis.command: true
