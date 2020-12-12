@@ -22,8 +22,10 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.material.MaterialData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -155,7 +157,7 @@ public class MetropolisGenerator extends ChunkGenerator {
 //    }
 
     @Override
-    public byte[][] generateBlockSections(World aWorld, Random random, int chunkX, int chunkZ, BiomeGrid biomes) {
+    public ChunkData generateChunkData(World aWorld, Random random, int chunkX, int chunkZ, BiomeGrid biomes) {
         if (natureDecay == null || decayProvider == null) { //FIXME TODO FUCKUP THIS IS NOT NECESSARY, use generator id (see MetropolisPlugin) memoization of providers, singletons
             if (aWorld.getEnvironment() == World.Environment.NETHER) {
                 decayProvider = new DecayProviderNether(this,new Random(aWorld.getSeed()));//new DecayProviderNether(this, new Random(aWorld.getSeed() + 6)); // why add 6 ?
@@ -187,9 +189,12 @@ public class MetropolisGenerator extends ChunkGenerator {
             }
             return chunk;
 
+            ChunkData chunkData = super.createChunkData(world);
+            chunkData.setRegion(0, 0, 0, 15, world.getMaxHeight() - 1, 15, Material.AIR);
+
         } catch (NullPointerException e) {
             Minions.e(e);
-            return super.generateBlockSections(world,random,chunkX,chunkZ,biomes);
+            return super.generateChunkData(world,random,chunkX,chunkZ,biomes);
         }
     }
 
