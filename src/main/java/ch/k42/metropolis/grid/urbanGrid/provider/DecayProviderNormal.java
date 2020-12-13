@@ -6,32 +6,35 @@ import java.util.Random;
 import java.util.Set;
 
 import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.extent.clipboard.Clipboard;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.world.block.BlockTypes;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.TreeSpecies;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.material.Leaves;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.type.Door;
+import org.bukkit.block.data.type.Leaves;
+import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.Stairs;
 import org.bukkit.util.noise.SimplexOctaveGenerator;
 
 import ch.k42.metropolis.generator.MetropolisGenerator;
 import ch.k42.metropolis.minions.Constants;
 import ch.k42.metropolis.minions.DecayOption;
 
-import com.boydti.fawe.FaweAPI;
-import com.boydti.fawe.util.EditSessionBuilder;
 import com.google.common.collect.ImmutableSet;
-import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.Vector;
-import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.blocks.BaseBlock;
-import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import com.sk89q.worldedit.regions.Region;
 
 /**
  * Provides decay to area of blocks.
@@ -81,17 +84,16 @@ public class DecayProviderNormal extends DecayProvider {
 
         long seed = generator.getWorldSeed();
         SimplexOctaveGenerator simplexOctaveGenerator = new SimplexOctaveGenerator(seed, 2);
-       // EditSession session = new EditSessionBuilder(FaweAPI.getWorld(world.getName())).changeSetNull().autoQueue(false).fastmode(true).checkMemory(false).build();
-        com.sk89q.worldedit.world.World weWorld = new BukkitWorld(generator.getWorld());
-        EditSession session = WorldEdit.getInstance().newEditSessionBuilder().world(weWorld).build();
-        BlockArrayClipboard clipboard = new BlockArrayClipboard(new CuboidRegion)
-        try {
+
+        com.sk89q.worldedit.world.World weWorld = BukkitAdapter.adapt(generator.getWorld());
+        BlockArrayClipboard clipboard = new BlockArrayClipboard(new CuboidRegion(weWorld, BlockVector3.at(x1, y1, z1), BlockVector3.at(x2, y2, z2)));
+        try (EditSession session = WorldEdit.getInstance().newEditSessionBuilder().world(weWorld).build()) {
         for (int z = z1; z < z2; z++) {
             for (int x = x1; x < x2; x++) {
                 for (int y = y1; y < y2; y++) {
                     Block block = world.getBlockAt(x, y, z);
-                    Vector v = new Vector(x, y, z);
-                    Vector v1 = new Vector(x-x1, y-y1,z-z1);
+                    BlockVector3 v = BlockVector3.at(x, y, z);
+                    BlockVector3 v1 = BlockVector3.at(x-x1, y-y1,z-z1);
                     // do we ignore this type of block? is it already empty?
 
                     if (!isValid(block) || !block.isEmpty() || !options.getExceptions().contains(block.getType())) {
@@ -100,7 +102,8 @@ public class DecayProviderNormal extends DecayProvider {
                         session.setBlock(v1, session.getBlock(v));
                         if (noise > fulldecay) {
 //                            block.setType(Material.AIR);
-                        	session.setBlock(v1, ne BaseBlock());
+//                        	session.setBlock(v1, ne BaseBlock());
+                            clipboard.setBlock(v1, BlockTypes.AIR.getDefaultState());
                             // we may add leaves if it's supporting
 
                         }else if (noise > partialdecay) {
@@ -111,68 +114,60 @@ public class DecayProviderNormal extends DecayProvider {
                                     if (random.nextInt(100) > 40) { // 40% happens nothing
                                         if (random.nextBoolean()){
 //                                            block.setType(Material.COBBLESTONE);
-                                        	cb.getBlock(v1).setType(Material.COBBLESTONE.getId());
+//                                        	cb.getBlock(v1).setType(Material.COBBLESTONE.getId());
+                                            clipboard.setBlock(v1, BlockTypes.COBBLESTONE.getDefaultState());
                                         }else{
 //                                            block.setType(Material.MOSSY_COBBLESTONE);
-                                        	cb.getBlock(v1).setType(Material.MOSSY_COBBLESTONE.getId());
+//                                        	cb.getBlock(v1).setType(Material.MOSSY_COBBLESTONE.getId());
+                                            clipboard.setBlock(v1, BlockTypes.MOSSY_COBBLESTONE.getDefaultState());
                                         }
-                                    }
-                                    break;
-                                case SANDSTONE:
-                                    if (random.nextBoolean()){
-//                                        block.setTypeIdAndData(Material.SANDSTONE_STAIRS.getId(), (byte) random.nextInt(4), true);
-                                    	cb.getBlock(v1).setIdAndData(Material.SANDSTONE_STAIRS.getId(), (byte)random.nextInt(4));
-                                    }
-                                    break;
-                                case BRICK:
-                                    if (random.nextBoolean()) {
-//                                        block.setTypeIdAndData(Material.BRICK_STAIRS.getId(), (byte) random.nextInt(4), true);
-                                    	cb.getBlock(v1).setIdAndData(Material.BRICK_STAIRS.getId(), (byte)random.nextInt(4));
                                     }
                                     break;
                                 case COBBLESTONE:
 //                                    block.setTypeIdAndData(Material.MOSSY_COBBLESTONE.getId(), (byte) random.nextInt(4), true);
-                                	cb.getBlock(v1).setIdAndData(Material.MOSSY_COBBLESTONE.getId(), (byte)random.nextInt(4));
+                                	clipboard.setBlock(v1, BlockTypes.MOSSY_COBBLESTONE.getDefaultState());
                                     break;
-                                case SMOOTH_BRICK:
-//                                    block.setTypeIdAndData(Material.SMOOTH_BRICK.getId(), (byte) random.nextInt(3), true);
-                                	cb.getBlock(v1).setIdAndData(Material.SMOOTH_BRICK.getId(), (byte)random.nextInt(3));
-                                    break;
-                                case WOOD:
+                                case SANDSTONE:
+                                case STONE_BRICKS:
+                                case BRICK:
+                                case OAK_PLANKS:
+                                case SPRUCE_PLANKS:
+                                case BIRCH_PLANKS:
+                                case JUNGLE_PLANKS:
+                                case DARK_OAK_PLANKS:
+                                case ACACIA_PLANKS:
                                     if (random.nextBoolean()) break; // not too much stairs
-                                    switch (block.getData()) {
-                                        case 0:
-//                                            block.setTypeIdAndData(Material.WOOD_STAIRS.getId(), (byte) random.nextInt(4), true);
-                                        	cb.getBlock(v1).setIdAndData(Material.WOOD_STAIRS.getId(), (byte)random.nextInt(4));
-                                            break;
-                                        case 1:
-//                                            block.setTypeIdAndData(Material.SPRUCE_WOOD_STAIRS.getId(), (byte) random.nextInt(4), true);
-                                        	cb.getBlock(v1).setIdAndData(Material.SPRUCE_WOOD_STAIRS.getId(), (byte)random.nextInt(4));
-                                            break;
-                                        case 2:
-//                                            block.setTypeIdAndData(Material.BIRCH_WOOD_STAIRS.getId(), (byte) random.nextInt(4), true)
-                                        	cb.getBlock(v1).setIdAndData(Material.BIRCH_WOOD_STAIRS.getId(), (byte)random.nextInt(4));
-                                            break;
-                                        default:
-//                                            block.setTypeIdAndData(Material.JUNGLE_WOOD_STAIRS.getId(), (byte) random.nextInt(4), true);
-                                        	cb.getBlock(v1).setIdAndData(Material.JUNGLE_WOOD_STAIRS.getId(), (byte)random.nextInt(4));
-                                            break;
+                                    String baseName = block.getType().toString().replaceAll("_PLANKS", "");
+                                    if (baseName.endsWith("S")){
+                                        baseName.substring(0, baseName.length()-2);
+                                    }
+                                    if (random.nextBoolean()) { //stairs
+                                        baseName += "_STAIRS";
+                                        block.setType(Material.valueOf(baseName));
+                                        Stairs stairs = (Stairs) block.getBlockData().clone();
+                                        stairs.setShape(Stairs.Shape.values()[random.nextInt(Stairs.Shape.values().length-1)]);
+                                        stairs.setHalf(Bisected.Half.values()[random.nextInt(Bisected.Half.values().length-1)]);
+                                        stairs.setFacing(BlockFace.values()[random.nextInt(BlockFace.values().length-1)]);
+                                        clipboard.setBlock(v1, BukkitAdapter.adapt(stairs));
+                                    } else { //slabs
+                                        baseName += "_SLAB";
+                                        block.setType(Material.valueOf(baseName));
+                                        Slab slab = (Slab) block.getBlockData();
+                                        slab.setType(Slab.Type.values()[random.nextInt(Slab.Type.values().length-1)]);
                                     }
                                     break;
-                                case WOODEN_DOOR: // randomly open wooden doors
-                                    if (Material.WOODEN_DOOR.equals(block.getRelative(0, 1, 0).getType())) {
-                                        if (random.nextInt(100) < 80) {
-                                            byte data = block.getData();
-                                            data ^= 4;
-//                                            block.setData(data);
-                                        	cb.getBlock(v1).setData(data);
-                                        }
-                                    }
-                                    break;
+                                case OAK_DOOR:
+                                case SPRUCE_DOOR:
+                                case BIRCH_DOOR:
+                                case JUNGLE_DOOR:
+                                case DARK_OAK_DOOR:
+                                case ACACIA_DOOR:
+                                case IRON_DOOR:
+                                    Door door = (Door) block.getBlockData();
+                                    door.setOpen(true);
+                                    clipboard.setBlock(v1, BukkitAdapter.adapt(door));
                                 default:
-//                                    block.setType(Material.AIR);
-                                	cb.getBlock(v1).setId(Material.AIR.getId());
-
+                                    clipboard.setBlock(v1, BlockTypes.AIR.getDefaultState());
                                     break;
                             }
 
@@ -180,7 +175,7 @@ public class DecayProviderNormal extends DecayProvider {
                             if(isSupporting(block)){
                                 for(Block n1 : getNeighbours(block)){
                                     // add them leaves
-                                    addLeavesRec(n1,options,2);
+                                    addLeavesRec(clipboard, n1 ,options , 2);
                                 }
                             }
                         }
@@ -189,39 +184,36 @@ public class DecayProviderNormal extends DecayProvider {
                 }
             }
         }
-//        Schematic s = new Schematic(cb);
-        cb.paste(session, new Vector(x1, y1, z1), true);
-//        s.paste(session.getWorld(), new Vector(x1, y1, z1), false, true, null);
-//        session.flushQueue();
+        Operation operation = new ClipboardHolder(clipboard).createPaste(session).to(BlockVector3.at(x1, y1, z1)).build();
+        Operations.complete(operation);
         }catch (Exception e) {
         	e.printStackTrace();
         }
     }
 
-    private void addLeavesRec(Block block, DecayOption option, int depth){
+    private void addLeavesRec(Clipboard clipboard, Block block, DecayOption option, int depth) throws WorldEditException {
         // recursion done?
         if(depth>0){
             // block free?
             if(block.isEmpty()){
                 // should we set a leaf?
-                if(random.nextDouble()<option.getLeavesScale()) { // should we add leaves?
+                if(random.nextDouble() < option.getLeavesScale()) { // should we add leaves?
                     //set leaf here
-                    Leaves leaf = getRandomLeaves();
-                    block.setType(leaf.getItemType());
-                    block.setData(leaf.getData());
-                    //since this is now supporting, set leafes around
+                    Material leavesMaterial = getRandomLeaves();
+                    block.setType(leavesMaterial);
+                    clipboard.setBlock(BukkitAdapter.asBlockVector(block.getLocation()), BukkitAdapter.adapt(block.getBlockData()));                   //since this is now supporting, set leafes around
                     for (Block n2 : getNeighbours(block)) {
-                        addLeavesRec(n2, option, depth - 1);
+                        addLeavesRec(clipboard, n2, option, depth - 1);
                     }
                 }
             }
         }
     }
 
-    private TreeSpecies[] treeSpecies =  TreeSpecies.values();
+    private Material[] leafSpecies =  new Material[]{Material.OAK_LEAVES, Material.SPRUCE_LEAVES, Material.BIRCH_LEAVES, Material.JUNGLE_LEAVES, Material.DARK_OAK_LEAVES, Material.ACACIA_LEAVES};
 
-    private Leaves getRandomLeaves(){
-        return new Leaves(treeSpecies[random.nextInt(treeSpecies.length)]);
+    private Material getRandomLeaves(){
+        return leafSpecies[random.nextInt(leafSpecies.length)];
     }
 
     /**

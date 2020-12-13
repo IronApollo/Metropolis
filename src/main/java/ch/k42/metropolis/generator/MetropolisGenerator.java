@@ -45,16 +45,6 @@ public class MetropolisGenerator extends ChunkGenerator {
         @Override
         public void populate(World aWorld, Random random, final Chunk chunk) { // we should make sure that the whol
             gridProvider.getGrid(chunk.getX(),chunk.getZ()).populate(chunk);
-//            Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-//
-//				@Override
-//				public void run() {
-//		            gridProvider.getGrid(chunk.getX(),chunk.getZ()).postPopulate(chunk);
-//
-//				}
-//            	
-//            });
-//            gridProvider.getGrid(chunk.getX(),chunk.getZ()).postPopulate(chunk);
         }
     }
 
@@ -142,20 +132,6 @@ public class MetropolisGenerator extends ChunkGenerator {
         return true;
     }
 
-//    @Override
-//    public ChunkData generateChunkData(World world, Random random, int x, int z, BiomeGrid biome) {
-//        //return super.generateChunkData(world, random, x, z, biome);
-//        ChunkData chunk = super.generateChunkData(world, random, x, z, biome);
-//        biome.setBiome(x,z, Biome.PLAINS);
-//
-//
-//        int maxHeight = 65; //how thick we want out flat terrain to be
-//
-//        chunk.setRegion(0,0,0,16,maxHeight,16,Material.STONE);
-//
-//        return chunk;
-//    }
-
     @Override
     public ChunkData generateChunkData(World aWorld, Random random, int chunkX, int chunkZ, BiomeGrid biomes) {
         if (natureDecay == null || decayProvider == null) { //FIXME TODO FUCKUP THIS IS NOT NECESSARY, use generator id (see MetropolisPlugin) memoization of providers, singletons
@@ -169,47 +145,29 @@ public class MetropolisGenerator extends ChunkGenerator {
         }
 
         try {
-
-            byte[][] chunk = new byte[aWorld.getMaxHeight() / 16][]; // TODO is this correct? This only works if height is 256
-            for (int x = 0; x < 16; x++) { //loop through all of the blocks in the chunk that are lower than maxHeight
+            int maxTerrainHeight = 65;
+            ChunkData chunkData = super.createChunkData(world);
+            chunkData.setRegion(0, 0, 0, 15, aWorld.getMaxHeight() - 1, 15, Material.AIR);
+            for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {
-
-                    biomes.setBiome(x,z, Biome.PLAINS);
-
-                    int maxHeight = 65; //how thick we want out flat terrain to be
-                    for (int y = 1; y < maxHeight; y++) {
-                        Material decay = natureDecay.checkBlock(aWorld, (chunkX * 16) + x, y, (chunkZ * 16) + z);
-                        if (decay != null) {
-                            setBlock(x, y, z, chunk, decay);
-                        } else {
-                            setBlock(x, y, z, chunk, Material.STONE);
+                    for (int y = 0; y < aWorld.getMaxHeight(); y++) {
+                        biomes.setBiome(x, y, z, Biome.PLAINS);
+                        if (y <= maxTerrainHeight) {
+                            Material decay = natureDecay.checkBlock(aWorld, (chunkX >> 4) + x, y, (chunkZ >> 4) + x);
+                            if (decay != null) {
+                                chunkData.setBlock(x, y, z, decay);
+                            } else {
+                                chunkData.setBlock(x, y, z, Material.STONE);
+                            }
                         }
                     }
                 }
             }
-            return chunk;
-
-            ChunkData chunkData = super.createChunkData(world);
-            chunkData.setRegion(0, 0, 0, 15, world.getMaxHeight() - 1, 15, Material.AIR);
-
+            return chunkData;
         } catch (NullPointerException e) {
             Minions.e(e);
             return super.generateChunkData(world,random,chunkX,chunkZ,biomes);
         }
-    }
-
-    private void setBlock(int x, int y, int z, byte[][] chunk, Material material) {
-        if (chunk[y >> 4] == null)
-            chunk[y >> 4] = new byte[16 * 16 * 16];
-
-        if (!isOutOfChunkBounds(x,y,z)) // out of bounds?
-            return;
-
-        chunk[y >> 4][((y & 0xF) << 8) | (z << 4) | x] = (byte) material.getId();
-    }
-
-    private boolean isOutOfChunkBounds(int x, int y, int z){
-        return (y <= 256 && y >= 0 && x <= 16 && x >= 0 && z <= 16 && z >= 0);
     }
 
     private final static int SPAWN_RADIUS = 100;

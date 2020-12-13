@@ -1,6 +1,6 @@
 package ch.k42.metropolis.minions;
 
-import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.math.BlockVector3;
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,7 +28,7 @@ public final class Cartesian3D {
         return new Cartesian2D(X,Z);
     }
 
-    public static final Cartesian3D fromVector(Vector v){
+    public static final Cartesian3D fromVector(BlockVector3 v){
         return new Cartesian3D(v.getBlockX(),v.getBlockY(),v.getBlockZ());
     }
 }
