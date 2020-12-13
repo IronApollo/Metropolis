@@ -81,8 +81,8 @@ public abstract class DecayProvider {
     public void destroyWithin(int x1, int x2, int y1, int y2, int z1, int z2, DecayOption options) {
     }
 
-    private static Set<Material> invalidBlocks = ImmutableSet.of(Material.GRASS,Material.LEAVES,Material.LOG);
-    private static Set<Material> unsupportingBlocks = ImmutableSet.of(Material.VINE,Material.LEAVES,Material.LOG);
+    private static Set<Material> invalidBlocks = ImmutableSet.of(Material.GRASS, Material.OAK_LEAVES, Material.SPRUCE_LEAVES, Material.BIRCH_LEAVES, Material.JUNGLE_LEAVES, Material.DARK_OAK_LEAVES, Material.ACACIA_LEAVES, Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG, Material.DARK_OAK_LOG, Material.ACACIA_LOG);
+    private static Set<Material> unsupportingBlocks = ImmutableSet.of(Material.VINE, Material.OAK_LEAVES, Material.SPRUCE_LEAVES, Material.BIRCH_LEAVES, Material.JUNGLE_LEAVES, Material.DARK_OAK_LEAVES, Material.ACACIA_LEAVES, Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG, Material.DARK_OAK_LOG, Material.ACACIA_LOG);
 
     protected boolean isValid(Block block) {
         return !invalidBlocks.contains(block.getType());

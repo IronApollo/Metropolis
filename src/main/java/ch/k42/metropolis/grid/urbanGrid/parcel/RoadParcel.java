@@ -15,7 +15,6 @@ import ch.k42.metropolis.minions.Cartesian2D;
 import ch.k42.metropolis.minions.Constants;
 import ch.k42.metropolis.minions.GridRandom;
 import ch.k42.metropolis.minions.Minions;
-import ch.k42.metropolis.minions.NoLaggAPI;
 import ch.k42.metropolis.plugin.PluginConfig;
 
 /**
@@ -39,11 +38,6 @@ public class RoadParcel extends StreetParcel {
         // Do nothing.
         if (road != null) {
             generator.getDecayProvider().destroyChunks(chunkX, chunkZ, chunkSizeX, chunkSizeZ, road.getBottom(Constants.BUILD_HEIGHT), road.getSize().Y, road.getConfig().getDecayOption());
-        }
-
-        //NoLagg Lighting Fix
-        if (PluginConfig.getNoLaggRelighting()) {
-            NoLaggAPI.relightChunk(chunk);
         }
     }
 

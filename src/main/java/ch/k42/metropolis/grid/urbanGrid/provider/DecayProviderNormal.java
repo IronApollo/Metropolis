@@ -101,8 +101,6 @@ public class DecayProviderNormal extends DecayProvider {
                         double noise = simplexOctaveGenerator.noise(x * holeScale, y * holeScale, z * holeScale, 0.3D, 0.6D, true);
                         session.setBlock(v1, session.getBlock(v));
                         if (noise > fulldecay) {
-//                            block.setType(Material.AIR);
-//                        	session.setBlock(v1, ne BaseBlock());
                             clipboard.setBlock(v1, BlockTypes.AIR.getDefaultState());
                             // we may add leaves if it's supporting
 
@@ -113,18 +111,13 @@ public class DecayProviderNormal extends DecayProvider {
                                 case STONE:
                                     if (random.nextInt(100) > 40) { // 40% happens nothing
                                         if (random.nextBoolean()){
-//                                            block.setType(Material.COBBLESTONE);
-//                                        	cb.getBlock(v1).setType(Material.COBBLESTONE.getId());
                                             clipboard.setBlock(v1, BlockTypes.COBBLESTONE.getDefaultState());
                                         }else{
-//                                            block.setType(Material.MOSSY_COBBLESTONE);
-//                                        	cb.getBlock(v1).setType(Material.MOSSY_COBBLESTONE.getId());
                                             clipboard.setBlock(v1, BlockTypes.MOSSY_COBBLESTONE.getDefaultState());
                                         }
                                     }
                                     break;
                                 case COBBLESTONE:
-//                                    block.setTypeIdAndData(Material.MOSSY_COBBLESTONE.getId(), (byte) random.nextInt(4), true);
                                 	clipboard.setBlock(v1, BlockTypes.MOSSY_COBBLESTONE.getDefaultState());
                                     break;
                                 case SANDSTONE:
@@ -154,6 +147,7 @@ public class DecayProviderNormal extends DecayProvider {
                                         block.setType(Material.valueOf(baseName));
                                         Slab slab = (Slab) block.getBlockData();
                                         slab.setType(Slab.Type.values()[random.nextInt(Slab.Type.values().length-1)]);
+                                        clipboard.setBlock(v1, BukkitAdapter.adapt(slab));
                                     }
                                     break;
                                 case OAK_DOOR:

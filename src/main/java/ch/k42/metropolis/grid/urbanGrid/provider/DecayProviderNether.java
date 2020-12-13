@@ -3,9 +3,12 @@ package ch.k42.metropolis.grid.urbanGrid.provider;
 import java.util.Random;
 import java.util.Set;
 
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.world.block.BlockCategories;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.util.noise.SimplexOctaveGenerator;
 
 import ch.k42.metropolis.generator.MetropolisGenerator;
@@ -67,12 +70,11 @@ public class DecayProviderNether extends DecayProvider {
                     if (options.getExceptions().contains(block.getType())) { // do we ignore this type of block?
                         continue;
                     }
-
-                    if (block.getType() == Material.WOODEN_DOOR && block.getRelative(0, 1, 0).getType() == Material.WOODEN_DOOR) {
+                    if (BlockCategories.DOORS.contains(BukkitAdapter.adapt(block.getBlockData())) && BlockCategories.DOORS.contains(BukkitAdapter.adapt(block.getRelative(0, 1, 0).getBlockData()))) {
                         if (random.nextInt(100) < 80) {
-                            byte data = block.getData();
-                            data ^= 4;
-                            block.setData(data);
+                            Door door = (Door) block.getBlockData();
+                            door.setOpen(true);
+                            block.setBlockData(door);
                         }
                     }
 
@@ -80,16 +82,16 @@ public class DecayProviderNether extends DecayProvider {
                         block.setType(Material.LAVA);
                     }
 
-                    if (block.getType() == Material.STATIONARY_WATER) {
-                        block.setType(Material.STATIONARY_LAVA);
+                    if (block.getType() == Material.WATER) {
+                        block.setType(Material.LAVA);
                     }
 
                     if (block.getType() == Material.GRASS) {
                         block.setType(Material.DIRT);
                     }
 
-                    if (block.getType() == Material.YELLOW_FLOWER && block.getType() == Material.RED_ROSE) {
-                        block.setType(Material.LONG_GRASS);
+                    if (block.getType() == Material.DANDELION && block.getType() == Material.POPPY) {
+                        block.setType(Material.TALL_GRASS);
                     }
 
 
@@ -123,9 +125,8 @@ public class DecayProviderNether extends DecayProvider {
                                 case STONE:
                                 case SANDSTONE:
                                 case COBBLESTONE:
-                                case CLAY_BRICK:
                                 case BRICK:
-                                case SMOOTH_BRICK:
+                                case STONE_BRICKS:
                                     if (random.nextInt(100) < 40) break; // 40% nothing
                                     block.setType(Material.NETHERRACK);
                                     break;
@@ -158,31 +159,19 @@ public class DecayProviderNether extends DecayProvider {
         );
     }
 
-    private static Set<Material> removableBlocks = ImmutableSet.of(
-            Material.THIN_GLASS,
-            Material.GLASS,
-            Material.STAINED_GLASS,
-            Material.STAINED_GLASS_PANE,
-            Material.WOODEN_DOOR
-    );
-
-    protected static boolean isRemovable(Block block) {
-        return removableBlocks.contains(block.getType());
-    }
-
     private static Set<Material> deletedBlocks = ImmutableSet.of(
-            Material.LEAVES,
-            Material.LEAVES_2,
-            Material.DOUBLE_PLANT,
-            Material.YELLOW_FLOWER,
-            Material.RED_ROSE,
+            Material.OAK_LEAVES,
+            Material.SPRUCE_LEAVES,
+            Material.ROSE_BUSH,
+            Material.DANDELION,
+            Material.POPPY,
             Material.GRASS,
-            Material.LONG_GRASS,
+            Material.TALL_GRASS,
             Material.VINE,
-            Material.LOG,
-            Material.LOG_2,
+            Material.OAK_LOG,
+            Material.SPRUCE_LOG,
             Material.WATER,
-            Material.STATIONARY_WATER
+            Material.WATER
     );
 
     protected static boolean isDeleted(Block block) {

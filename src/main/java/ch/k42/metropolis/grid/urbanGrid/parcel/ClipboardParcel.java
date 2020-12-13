@@ -15,7 +15,6 @@ import ch.k42.metropolis.minions.Cartesian2D;
 import ch.k42.metropolis.minions.Cartesian3D;
 import ch.k42.metropolis.minions.Constants;
 import ch.k42.metropolis.minions.Minions;
-import ch.k42.metropolis.minions.NoLaggAPI;
 import ch.k42.metropolis.plugin.PluginConfig;
 
 /**
@@ -97,10 +96,6 @@ public class ClipboardParcel extends Parcel {
         	Minions.d("clipboard.getConfig null? : " + (clipboard.getConfig() == null));
         	Minions.d("clipboard.getConfig.getDecayOption null? : " + (clipboard.getConfig().getDecayOption() == null));
         	e.printStackTrace();
-        }
-        //NoLagg Lighting Fix
-        if (PluginConfig.getNoLaggRelighting()) {
-            NoLaggAPI.relightChunk(chunk);
         }
 
     }

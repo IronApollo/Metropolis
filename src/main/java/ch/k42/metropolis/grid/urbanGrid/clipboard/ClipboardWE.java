@@ -4,32 +4,28 @@ package ch.k42.metropolis.grid.urbanGrid.clipboard;
 import ch.k42.metropolis.generator.MetropolisGenerator;
 import ch.k42.metropolis.grid.urbanGrid.config.GlobalSchematicConfig;
 import ch.k42.metropolis.grid.urbanGrid.config.SchematicConfig;
-import ch.k42.metropolis.grid.urbanGrid.provider.EnvironmentProvider;
 import ch.k42.metropolis.minions.Cartesian2D;
 import ch.k42.metropolis.minions.Cartesian3D;
 import ch.k42.metropolis.minions.DirtyHacks;
 import ch.k42.metropolis.minions.GridRandom;
 import ch.k42.metropolis.minions.Minions;
-import ch.k42.metropolis.plugin.PluginConfig;
-
-import com.boydti.fawe.FaweAPI;
-import com.boydti.fawe.object.schematic.Schematic;
-import com.boydti.fawe.object.visitor.FastIterator;
-import com.boydti.fawe.util.EditSessionBuilder;
-import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
-import com.sk89q.worldedit.Vector;
-import com.sk89q.worldedit.blocks.BaseBlock;
-import com.sk89q.worldedit.bukkit.BukkitWorld;
-import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
-
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.world.block.BlockState;
+import com.sk89q.worldedit.world.block.BlockTypes;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
-import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.EntityType;
 
 import java.util.ArrayList;
@@ -39,9 +35,7 @@ import java.util.List;
  * Created by Thomas on 07.03.14.
  */
 public class ClipboardWE implements Clipboard{
-    private com.sk89q.worldedit.extent.clipboard.Clipboard cuboid;
-    private Schematic schem;
-//    private Schematic schem;
+    private com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
     private SchematicConfig config;
     private GlobalSchematicConfig globalConfig;
     private List<Cartesian3D> chests = new ArrayList<>();
@@ -49,12 +43,11 @@ public class ClipboardWE implements Clipboard{
     private int blockCount;
     private String groupId;
 
-    public ClipboardWE(Schematic s, SchematicConfig config, GlobalSchematicConfig globalConfig,String groupId) {
-	    this.schem = s;
-    	this.cuboid = s.getClipboard();
+    public ClipboardWE(com.sk89q.worldedit.extent.clipboard.Clipboard clipboard, SchematicConfig config, GlobalSchematicConfig globalConfig,String groupId) {
+    	this.clipboard = clipboard;
         this.config = config;
         this.globalConfig = globalConfig;
-        this.blockCount = s.getClipboard().getRegion().getArea();
+        this.blockCount = (int) clipboard.getRegion().getVolume();
         this.groupId = groupId;
         if(config.getGroundLevelY()==0){
             config.setGroundLevelY(estimateStreetLevel());
@@ -64,19 +57,16 @@ public class ClipboardWE implements Clipboard{
     @Override
     public void paste(MetropolisGenerator generator, Cartesian2D base, int streetLevel) {
         int blockY = getBottom(streetLevel);
-        Vector at = new Vector(base.X << 4, blockY , base.Y << 4);
-        Minions.d("Schematic " + this.schem.toString() + " ; " + this.getConfig().getBuildName() + " pasted at " + at.toString());
-        try {
-            EditSession editSession = new EditSessionBuilder(FaweAPI.getWorld(generator.getWorld().getName())).changeSetNull().autoQueue(false).fastmode(true).checkMemory(false).build();
+        BlockVector3 at = BlockVector3.at(base.X << 4, blockY , base.Y << 4);
+        Minions.d("Schematic " + this.clipboard.toString() + " ; " + this.getConfig().getBuildName() + " pasted at " + at.toString());
+        try (EditSession editSession = WorldEdit.getInstance().newEditSessionBuilder().world(BukkitAdapter.adapt(generator.getWorld())).build()) {
             //place Schematic
             GridRandom rand = generator.getGridProvider().getGrid(base.X,base.Y).getRandom();
             placeNew(generator, rand, editSession, at);
-            editSession.flushQueue();
-            editSession.setBlock(at, new BaseBlock(Material.RED_GLAZED_TERRACOTTA.getId()));
-            editSession.setBlock(at.add(15, 0, 0), new BaseBlock(Material.RED_GLAZED_TERRACOTTA.getId()));
-            editSession.setBlock(at.add(15, 0, 15), new BaseBlock(Material.RED_GLAZED_TERRACOTTA.getId()));
-            editSession.setBlock(at.add(0, 0, 15), new BaseBlock(Material.RED_GLAZED_TERRACOTTA.getId()));
-            editSession.flushQueue();
+            editSession.setBlock(at, BlockTypes.RED_GLAZED_TERRACOTTA.getDefaultState());
+            editSession.setBlock(at.add(15, 0, 0), BlockTypes.RED_GLAZED_TERRACOTTA.getDefaultState());
+            editSession.setBlock(at.add(15, 0, 15), BlockTypes.RED_GLAZED_TERRACOTTA.getDefaultState());
+            editSession.setBlock(at.add(0, 0, 15), BlockTypes.RED_GLAZED_TERRACOTTA.getDefaultState());
 
             //            schem.paste(editSession.getWorld(), at, false, true, null);
 //            editSession.flushQueue();
@@ -145,23 +135,20 @@ public class ClipboardWE implements Clipboard{
 
     @Override
     public Cartesian3D getSize() {
-        return new Cartesian3D(cuboid.getRegion().getWidth(),cuboid.getRegion().getHeight(),cuboid.getRegion().getLength());
+        return new Cartesian3D(clipboard.getRegion().getWidth(),clipboard.getRegion().getHeight(),clipboard.getRegion().getLength());
     }
 
-    private void placeNew(MetropolisGenerator generator, GridRandom rand, EditSession editSession, Vector at) {
-    	for(Vector v : new FastIterator(this.cuboid.getRegion(), editSession)) {
-    		BaseBlock block = this.cuboid.getBlock(v);
-    		Vector vec = v.add(at).subtract(0, 64, 0);
-    		try {
-				editSession.setBlock(vec, block);
-			} catch (MaxChangedBlocksException e) {
-			}
-    	}
-//    	this.schem.getClipboard().setOrigin(new Vector(0,at.getBlockY(),0));
-//    	return this.schem.paste(FaweAPI.getWorld(generator.getWorld().getName()), at);
+    private void placeNew(MetropolisGenerator generator, GridRandom rand, EditSession editSession, BlockVector3 at) {
+        Operation operation = new ClipboardHolder(clipboard).createPaste(editSession).to(at).build();
+        try {
+            Operations.complete(operation);
+        } catch (WorldEditException e) {
+            Minions.w("Unable to place ClipboardWE!");
+            e.printStackTrace();
+        }
     }
     
-    private void place(MetropolisGenerator generator, EditSession editSession, Vector pos) throws Exception {
+    private void place(MetropolisGenerator generator, EditSession editSession, BlockVector3 pos) throws Exception {
 //        EnvironmentProvider natureDecay = generator.getNatureDecayProvider();
 //        BlockArrayClipboard cb = new BlockArrayClipboard(cuboid.);
         chests.clear();
@@ -176,8 +163,8 @@ public class ClipboardWE implements Clipboard{
             for (int y = 0; y < getSize().Y; y++) {
                 for (int z = 0; z < getSize().Z; z++) {
 
-                    BaseBlock block = cuboid.getBlock(new Vector(x, y, z));
-                    Vector vec = new Vector(x, y, z).add(pos);
+                    BlockState block = clipboard.getBlock(BlockVector3.at(x, y, z));
+                    BlockVector3 vec = BlockVector3.at(x, y, z).add(pos);
                     //always will be null
 //                    Material decay = natureDecay.checkBlock(generator.getWorld(), (int) vec.getX(), (int) vec.getY(), (int) vec.getZ());
 //
@@ -188,9 +175,9 @@ public class ClipboardWE implements Clipboard{
 //                        continue;
 //                    }
 
-                    if (block.getId() == Material.CHEST.getId()) {
+                    if (block.getBlockType() == BlockTypes.CHEST) {
                         chests.add(new Cartesian3D(x, y, z));
-                    } else if (block.getId() == Material.SPONGE.getId()) {
+                    } else if (block.getBlockType() == BlockTypes.SPONGE) {
                         spawners.add(new Cartesian3D(x, y, z));
                     }
                     editSession.setBlock(vec, block);
@@ -297,8 +284,8 @@ public class ClipboardWE implements Clipboard{
 
         for (int y = getSize().Y - 2; y >= 0; y--) {
 //            int b = cuboid.getBlock(new Vector(0, y, 0)).getType();
-            Material b = cuboid.getBlock(new Vector(0, y, 0)) == null ? Material.AIR : Material.getMaterial(cuboid.getBlock(new Vector(0, y, 0)).getType());
-            if (b != Material.AIR && b != Material.LONG_GRASS && b != Material.YELLOW_FLOWER)
+            Material b = clipboard.getBlock(BlockVector3.at(0, y, 0)) == null ? Material.AIR : BukkitAdapter.adapt(clipboard.getBlock(BlockVector3.at(0, y, 0)).getBlockType());
+            if (b != Material.AIR && b != Material.TALL_GRASS && b != Material.DANDELION)
                 return y + 1;
         }
         return 1;

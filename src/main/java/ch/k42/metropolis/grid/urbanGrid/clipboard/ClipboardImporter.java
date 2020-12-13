@@ -4,12 +4,19 @@ package ch.k42.metropolis.grid.urbanGrid.clipboard;
 import ch.k42.metropolis.grid.urbanGrid.config.SchematicConfig;
 import ch.k42.metropolis.grid.urbanGrid.enums.ContextType;
 import ch.k42.metropolis.minions.Minions;
-import com.sk89q.worldedit.CuboidClipboard;
-import com.sk89q.worldedit.data.DataException;
-import com.sk89q.worldedit.schematic.SchematicFormat;
+import com.sk89q.worldedit.extent.clipboard.io.BuiltInClipboardFormat;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter;
+import com.sk89q.worldedit.math.transform.AffineTransform;
+import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.world.DataException;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -78,7 +85,7 @@ public class ClipboardImporter {
 
     private boolean rotateAndCacheSchematic(File schematicFile)
             throws IOException, DataException, NoSuchAlgorithmException {
-        SchematicFormat format = SchematicFormat.getFormat(schematicFile);
+        ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
 
         SchematicConfig config = findConfig(schematicFile.getName());
         if(config==null){
@@ -111,21 +118,37 @@ public class ClipboardImporter {
         File southFile =    new File(cacheFolder, ClipboardConstants.SOUTH_FILE);
         File westFile =     new File(cacheFolder, ClipboardConstants.WEST_FILE);
 
-        CuboidClipboard cuboid;
-        cuboid = format.load(schematicFile);
-        //cache the north face first
-        format.save(cuboid, northFile);
+        com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
 
-        //get each cuboid direction and save them
-        cuboid.rotate2D(90);
-        format.save(cuboid, eastFile);
+        try (ClipboardReader reader = format.getReader(new FileInputStream(schematicFile))){
+            clipboard = reader.read();
+        }
+        if(clipboard == null){
+            Minions.w("Clipboard from schematicFile " + schematicFile.getName() + " is null!");
+            return false;
+        }
 
-        cuboid.rotate2D(90);
-        format.save(cuboid, southFile);
+        ClipboardHolder holder = new ClipboardHolder(clipboard);
 
-        cuboid.rotate2D(90);
-        format.save(cuboid, westFile);
-
+        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(northFile))) {
+            writer.write(holder.getClipboard());
+        }
+        AffineTransform transform = new AffineTransform();
+        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(northFile))) {
+            transform.rotateY(-90);
+            holder.setTransform(transform);
+            writer.write(holder.getClipboard());
+        }
+        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(northFile))) {
+            transform.rotateY(-90);
+            holder.setTransform(transform);
+            writer.write(holder.getClipboard());
+        }
+        try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(northFile))) {
+            transform.rotateY(-90);
+            holder.setTransform(transform);
+            writer.write(holder.getClipboard());
+        }
         return true;
     }
 

@@ -77,7 +77,7 @@ public class OrePopulator extends BlockPopulator {
 
                                 //noinspection deprecation,deprecation
                                 if ((d13 * d13 + d14 * d14 + d15 * d15 >= 1.0D)
-                                        || (world.getBlockTypeIdAt(i3, i4, i5) != Material.STONE.getId())
+                                        || (world.getBlockAt(i3, i4, i5).getType() != Material.STONE)
                                         || i4 > oreLevel){
                                     continue;
                                 }

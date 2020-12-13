@@ -50,10 +50,10 @@ public abstract class StreetParcel extends Parcel {
                 case 7:
                 case 8: //20%
                     chunk.getBlock(x, y, z).setType(Material.DIRT);
-                    chunk.getBlock(x, y + 1, z).setTypeIdAndData(Material.LONG_GRASS.getId(), (byte) rand.getRandomInt(3), false);
+                    chunk.getBlock(x, y + 1, z).setType(Material.TALL_GRASS);
                     break;
                 case 9: //10% since halfslabs are quite annoying
-                    chunk.getBlock(x, y, z).setTypeIdAndData(Material.STEP.getId(), (byte) 3, false);
+                    chunk.getBlock(x, y, z).setType(Material.STONE_BRICK_SLAB);
                     break;
             }
         }
@@ -71,7 +71,7 @@ public abstract class StreetParcel extends Parcel {
                 continue;
             }
             if (rand.getChance(50)) {
-                chunk.getBlock(x, y, z).setTypeIdAndData(Material.STEP.getId(), (byte) 0x3, false); //cobble stone slab
+                chunk.getBlock(x, y, z).setType(Material.COBBLESTONE_SLAB);
             }
         }
     }

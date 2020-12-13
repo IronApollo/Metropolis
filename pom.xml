@@ -99,6 +99,15 @@
 
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>conf</id>
+            <build>
+                <directory>${dir}</directory>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <resources>
             <resource>
@@ -129,8 +138,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.0</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
         </plugins>

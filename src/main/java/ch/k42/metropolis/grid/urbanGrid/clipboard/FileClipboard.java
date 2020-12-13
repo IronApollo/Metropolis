@@ -11,17 +11,13 @@ import ch.k42.metropolis.minions.DirtyHacks;
 import ch.k42.metropolis.minions.GridRandom;
 import ch.k42.metropolis.minions.Minions;
 import ch.k42.metropolis.plugin.PluginConfig;
-
-import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.MaxChangedBlocksException;
-import com.sk89q.worldedit.Vector;
-import com.sk89q.worldedit.blocks.BaseBlock;
-import com.sk89q.worldedit.bukkit.BukkitWorld;
-import com.sk89q.worldedit.data.DataException;
-import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
-import com.sk89q.worldedit.schematic.SchematicFormat;
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.util.SideEffectSet;
+import com.sk89q.worldedit.world.block.BlockState;
+import com.sk89q.worldedit.world.block.BlockTypes;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -30,8 +26,6 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.EntityType;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,17 +39,18 @@ public class FileClipboard implements Clipboard{
     private List<Cartesian3D> spawners = new ArrayList<>();
     private int blockCount;
     private String groupId;
-    private CuboidClipboard cuboid;
+    private com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
 //    private Schematic schem;
 
-    public FileClipboard(CuboidClipboard cuboid, SchematicConfig config, GlobalSchematicConfig globalConfig, String hash) {
+    public FileClipboard(com.sk89q.worldedit.extent.clipboard.Clipboard clipboard, SchematicConfig config, GlobalSchematicConfig globalConfig, String hash) {
         this.config = config;
         this.globalConfig = globalConfig;
         this.groupId = hash;
-        this.cuboid = cuboid;
+        this.clipboard = clipboard;
 //        this.schem = s;
 
-        this.blockCount = cuboid.getHeight()*cuboid.getLength()*cuboid.getWidth();
+        this.blockCount = (int)clipboard.getRegion().getVolume();
+
         if(config.getGroundLevelY()==0){
             config.setGroundLevelY(estimateStreetLevel());
         }
@@ -76,10 +71,9 @@ public class FileClipboard implements Clipboard{
     @Override
     public void paste(MetropolisGenerator generator, Cartesian2D base, int streetLevel) {
         int blockY = getBottom(streetLevel);
-        Vector at = new Vector(base.X << 4, blockY , base.Y << 4);
-        try {
-            EditSession editSession = getEditSession(generator);
-            editSession.setFastMode(true);
+        BlockVector3 at = BlockVector3.at(base.X << 4, blockY , base.Y << 4);
+        try (EditSession editSession = WorldEdit.getInstance().newEditSessionBuilder().world(BukkitAdapter.adapt(generator.getWorld())).build()){
+            editSession.setSideEffectApplier(SideEffectSet.none());
 //            schem.paste(editSession.getWorld(), at, false, true, null);
             //place Schematic
             place(generator, editSession, at);
@@ -128,7 +122,7 @@ public class FileClipboard implements Clipboard{
                         if (!rand.getChance(config.getSpawnerOdds())) { //we were unlucky, chest doesn't get placed{
                             block.setType(Material.AIR);
                         } else { //set spawn type
-                            block.setType(Material.MOB_SPAWNER);
+                            block.setType(Material.SPAWNER);
                             if (block.getState() instanceof CreatureSpawner) {
                                 CreatureSpawner spawner = (CreatureSpawner) block.getState(); //block has to be a chest
                                 spawner.setSpawnedType(getSpawnedEntity(rand));
@@ -152,12 +146,11 @@ public class FileClipboard implements Clipboard{
 
     @Override
     public Cartesian3D getSize() {
-//    	com.sk89q.worldedit.extent.clipboard.Clipboard cuboid = loadCuboid();
-        return new Cartesian3D(cuboid.getWidth(),cuboid.getHeight(),cuboid.getLength());
+        return new Cartesian3D(clipboard.getRegion().getWidth(), clipboard.getRegion().getHeight(), clipboard.getRegion().getLength());
     }
 
 
-    private void place(MetropolisGenerator generator, EditSession editSession, Vector pos) throws Exception {
+    private void place(MetropolisGenerator generator, EditSession editSession, BlockVector3 pos) throws Exception {
 //    	com.sk89q.worldedit.extent.clipboard.Clipboard cuboid = loadCuboid();
         EnvironmentProvider natureDecay = generator.getNatureDecayProvider();
         chests.clear();
@@ -169,24 +162,23 @@ public class FileClipboard implements Clipboard{
 //        System.out.println("CUBOID AREA SIZE: " + cuboid.getRegion().getArea() + ";; CUBOID SIZE: " + cx*cy*cz);
 
 
-        for (int x = 0; x < cuboid.getWidth(); x++) {
-            for (int y = 0; y < cuboid.getHeight(); y++) {
-                for (int z = 0; z < cuboid.getLength(); z++) {
+        for (int x = 0; x < clipboard.getRegion().getWidth(); x++) {
+            for (int y = 0; y < clipboard.getRegion().getHeight(); y++) {
+                for (int z = 0; z < clipboard.getRegion().getLength(); z++) {
 
-                    BaseBlock block = cuboid.getBlock(new Vector(x, y, z));
-                    Vector vec = new Vector(x, y, z).add(pos);
-                    Material decay = natureDecay.checkBlock(generator.getWorld(), (int) vec.getX(), (int) vec.getY(), (int) vec.getZ());
+                    BlockState block = clipboard.getBlock(BlockVector3.at(x, y, z));
+                    BlockVector3 vec = BlockVector3.at(x, y, z).add(pos);
+                    Material decay = natureDecay.checkBlock(generator.getWorld(), vec.getX(), vec.getY(), vec.getZ());
                     
                     if (decay != null) {
-                        block.setType(decay.getId());
-                        editSession.setBlock(vec, block);
+                        editSession.setBlock(vec, BukkitAdapter.adapt(decay.createBlockData()));
 //                        cuboid.setBlock(new Vector(x, y, z), block);
                         continue;
                     }
 
-                    if (block.getId() == Material.CHEST.getId()) {
+                    if (block.getBlockType() == BlockTypes.CHEST) {
                         chests.add(new Cartesian3D(x, y, z));
-                    } else if (block.getId() == Material.SPONGE.getId()) {
+                    } else if (block.getBlockType() == BlockTypes.SPONGE) {
                         spawners.add(new Cartesian3D(x, y, z));
                     }
                     editSession.setBlock(vec, block);
@@ -216,10 +208,6 @@ public class FileClipboard implements Clipboard{
     @Override
     public String getGroupId() {
         return groupId;
-    }
-
-    private EditSession getEditSession(MetropolisGenerator generator) {
-        return new EditSession(new BukkitWorld(generator.getWorld()), blockCount);
     }
 
     private EntityType getSpawnedEntity(GridRandom random) {
@@ -290,12 +278,12 @@ public class FileClipboard implements Clipboard{
      */
     private int estimateStreetLevel() {
 //    	com.sk89q.worldedit.extent.clipboard.Clipboard cuboid = loadCuboid();
-        if (cuboid.getHeight() - 2 < 0) return 1;
+        if (clipboard.getRegion().getHeight() - 2 < 0) return 1;
 
-        for (int y = cuboid.getHeight() - 2; y >= 0; y--) {
+        for (int y = clipboard.getRegion().getHeight() - 2; y >= 0; y--) {
 //            int b = cuboid.getPoint(new Vector(0, y, 0)).getType();
-            Material b = cuboid.getBlock(new Vector(0, y, 0)) == null ? Material.AIR : Material.getMaterial(cuboid.getBlock(new Vector(0, y, 0)).getType());
-            if (b != Material.AIR && b != Material.LONG_GRASS && b != Material.YELLOW_FLOWER)
+            Material b = clipboard.getBlock(BlockVector3.at(0, y, 0)) == null ? Material.AIR : BukkitAdapter.adapt(clipboard.getBlock(BlockVector3.at(0, y, 0)).getBlockType());
+            if (b != Material.AIR && b != Material.TALL_GRASS && b != Material.DANDELION)
                 return y + 1;
         }
         return 1;

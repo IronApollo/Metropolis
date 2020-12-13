@@ -99,7 +99,7 @@ public class CavePopulator extends BlockPopulator {
                 }
             }
 
-            if (world.getBlockTypeIdAt(blockX, blockY, blockZ) != 0) {
+            if (world.getBlockAt(blockX, blockY, blockZ).getType() != Material.AIR) {
                 int radius = 2 + random.nextInt(4);
                 int radius2 = radius * radius + 1;
                 for (int x = -radius; x <= radius; x++) {
@@ -141,14 +141,14 @@ public class CavePopulator extends BlockPopulator {
                             break;
                         case LAVA:
                             if (loc.y < lavapoint) {
-                                block.setType(Material.STATIONARY_LAVA);
+                                block.setType(Material.LAVA);
                             } else {
                                 block.setType(Material.AIR);
                             }
                             break;
                         case WATER:
                             if (loc.y < midpoint) {
-                                block.setType(Material.STATIONARY_WATER);
+                                block.setType(Material.WATER);
                             } else {
                                 block.setType(Material.AIR);
                             }

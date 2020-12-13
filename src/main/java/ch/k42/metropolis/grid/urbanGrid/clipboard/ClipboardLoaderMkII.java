@@ -6,13 +6,11 @@ import ch.k42.metropolis.grid.urbanGrid.config.SchematicConfig;
 import ch.k42.metropolis.grid.urbanGrid.enums.Direction;
 import ch.k42.metropolis.minions.Cartesian2D;
 import ch.k42.metropolis.minions.Minions;
-
-import com.boydti.fawe.object.schematic.Schematic;
-import com.sk89q.worldedit.CuboidClipboard;
-import com.sk89q.worldedit.data.DataException;
-import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
+import com.google.common.collect.ImmutableList;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
-import com.sk89q.worldedit.schematic.SchematicFormat;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
+import com.sk89q.worldedit.world.DataException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -96,8 +94,15 @@ public class ClipboardLoaderMkII implements ClipboardLoader{
 ////        Schematic schem = ClipboardFormat.findByFile(streetFile).load(streetFile);
 //        format.save(cuboid, streetFile);
         
-        SchematicFormat format = SchematicFormat.getFormat(streetFile);
-        CuboidClipboard cuboid = format.load(streetFile); 
+        ClipboardFormat format = ClipboardFormats.findByFile(streetFile);
+        com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
+        try (ClipboardReader reader = format.getReader(new FileInputStream(streetFile))){
+            clipboard = reader.read();
+        }
+        if(clipboard == null){
+            Minions.w("Clipboard is null for street " + streetFile.getName() + "!");
+            return ImmutableList.of();
+        }
         
 //        Schematic s = ClipboardFormat.SCHEMATIC.load(streetFile);
         
@@ -106,7 +111,7 @@ public class ClipboardLoaderMkII implements ClipboardLoader{
         
         SchematicConfig config = getConfig(folder);
         String hash = folder.getName();
-        Clipboard clip = new FileClipboard(cuboid, config, globalConfig, hash);
+        Clipboard clip = new FileClipboard(clipboard, config, globalConfig, hash);
         hash += ".STREET";
         clipstore.put( hash,clip);
         if(!this.zero) {
@@ -141,8 +146,15 @@ public class ClipboardLoaderMkII implements ClipboardLoader{
 
     private Clipboard loadFromCache(File file,String hash,Direction direction,SchematicConfig config) throws DataException{
         try {
-            SchematicFormat format = SchematicFormat.getFormat(file);
-            CuboidClipboard cuboid = format.load(file);
+            ClipboardFormat format = ClipboardFormats.findByFile(file);
+            com.sk89q.worldedit.extent.clipboard.Clipboard clipboard;
+            try (ClipboardReader reader = format.getReader(new FileInputStream(file))){
+                clipboard = reader.read();
+            }
+            if(clipboard == null){
+                Minions.w("Clipboard from cache " + file.getName() + "is null!");
+                return null;
+            }
 //        	Minions.i("Start for " + hash.substring(0, 5) + " DIRECTION " + direction.name());
 ////            Schematic schem = ClipboardFormat.findByFile(file).load(file);
 //        	Minions.i("Schematic loaded.");
@@ -150,7 +162,7 @@ public class ClipboardLoaderMkII implements ClipboardLoader{
 //            s.save(file, ClipboardFormat.SCHEMATIC);
 //            BlockArrayClipboard cuboid = (BlockArrayClipboard) s.getClipboard();
 
-            Clipboard clip = new FileClipboard(cuboid,config,globalConfig, hash);
+            Clipboard clip = new FileClipboard(clipboard,config,globalConfig, hash);
 //            Minions.i("Clipboard created.");
 
             String thash = hash + "." + direction.name();
@@ -160,7 +172,7 @@ public class ClipboardLoaderMkII implements ClipboardLoader{
 	               dao.deleteClipboardHashes(thash);
 	            }
 	            //DAO, store in db
-	            Cartesian2D size = new Cartesian2D(cuboid.getWidth()>>4,cuboid.getLength()>>4);
+	            Cartesian2D size = new Cartesian2D(clipboard.getRegion().getWidth()>>4,clipboard.getRegion().getLength()>>4);
 	            dao.storeClipboard(thash,file.getName(), direction,config,size);
 	
 	            if(!config.getRoadFacing()){ // if it doesn't need roads, store it for 'non-road' usage too
